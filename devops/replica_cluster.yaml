@@ -1067,6 +1067,10 @@ Resources:
               - ssm:GetParameter
             Resource: !Sub "arn:aws:ssm:*:*:parameter/${MetricsConfigParameter}"
             Effect: Allow
+          - Action:
+              - autoscaling:SetInstanceHealth
+            Resource:  !Sub "arn:aws:autoscaling:${AWS::Region}:${AWS::AccountId}:autoScalingGroup:groupid:${ReplicaAutoScalingGroup}"
+            Effect: Allow
   ReplicaNodeInstanceProfile:
     Type: "AWS::IAM::InstanceProfile"
     Properties:
