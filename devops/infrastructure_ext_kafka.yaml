@@ -58,6 +58,13 @@ Parameters:
   AlarmSNSTopic:
     Type: String
     Description: An optional SNS topic to receive notifications from alarms
+  ConfigureILB:
+    Type: Number
+    AllowedValues:
+      - 0
+      - 1
+    Default: 0
+    Description: Whether or not to create an internal loadbalaner for access
 
 
 Metadata:
@@ -169,6 +176,7 @@ Conditions:
   HasNotificationEmail: !Not [!Equals [ !Ref NotificationEmail, "" ]]
   HasSNSTopic: !Not [!Equals [ !Ref AlarmSNSTopic, "" ]]
   HasKafkaBrokerEndpoint: !Not [!Equals [ !Ref KafkaBrokerEndpoint, "" ]]
+  CreateILB: !Equals [ !Ref ConfigureILB, 1]
 
 Resources:
   # TODO: Sooner or later we should probably put some of this on private subnets
@@ -269,6 +277,16 @@ Resources:
         FromPort: '80'
         ToPort: '80'
         CidrIp: "0.0.0.0/0"
+  INTAlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow Inernal HTTPS Access
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: !Join ["", [!Ref VpcBaseIp, ".0.0/16"]]
 
   RPCALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -303,6 +321,45 @@ Resources:
       UnhealthyThresholdCount: 4
       HealthyThresholdCount: 4
       Port: 8545
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+
+  INTALB:
+    Condition: "CreateILB"
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internal
+      Subnets:
+      - !Ref PrivateA
+      - !Ref PrivateB
+      - !Ref PrivateC
+      LoadBalancerAttributes:
+      - Key: idle_timeout.timeout_seconds
+        Value: '10'
+      SecurityGroups:
+      - !Ref INTAlbSecurityGroup
+      Tags:
+      - Key: name
+        Value: !Sub "${AWS::StackName}-INT-Alb"
+      # IpAddressType: dualstack
+  INTALBListener:
+    Condition: "CreateILB"
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: "forward"
+        TargetGroupArn: !Ref INTALBGroup
+      LoadBalancerArn: !Ref INTALB
+      Port: '80'
+      Protocol: HTTP
+  INTALBGroup:
+    Condition: "CreateILB"
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      UnhealthyThresholdCount: 4
+      HealthyThresholdCount: 4
+      Port: 8546
       Protocol: HTTP
       VpcId: !Ref VpcId
 
@@ -349,6 +406,26 @@ Outputs:
     Value: !Ref RPCALBListener
     Export:
       Name: !Sub "${AWS::StackName}-RPCALBListener"
+  INTALBGroupName:
+    Description: The full name of the alb target group for the INT load balancer
+    Value: !If [CreateILB, !Sub ${INTALBGroup.TargetGroupFullName}, ""]
+    Export:
+      Name: !Sub "${AWS::StackName}-INTALBGroupName"
+  INTALBName:
+    Description: The full name of the INT load balancer
+    Value: !If [CreateILB, !Sub ${INTALB.LoadBalancerFullName}, ""]
+    Export:
+      Name: !Sub "${AWS::StackName}-INTALBName"
+  INTALBDNS:
+    Description: The DNS of the INT load balancer
+    Value: !If [CreateILB, !Sub ${INTALB.DNSName}, ""]
+    Export:
+      Name: !Sub "${AWS::StackName}-INTALBDNS"
+  INTALBListener:
+    Description: The ARN of the INT load balancer's listener
+    Value: !If [CreateILB, !Ref INTALBListener, ""]
+    Export:
+      Name: !Sub "${AWS::StackName}-INTALBListener"
   VpcId:
     Description: The VPC the stack is deployed to
     Value: !Ref VpcId

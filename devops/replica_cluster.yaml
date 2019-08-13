@@ -321,6 +321,7 @@ Conditions:
     - !Ref ReplicaServeHTTP
     - 'true'
   HasReplicaImageAMI: !Not [!Equals [ !Ref ReplicaImageAMI, "" ]]
+  HasILB: !Not [!Equals [ {"Fn::ImportValue": !Sub "${InfrastructureStack}-INTALBGroup"}, "" ]]
 
 Resources:
   LambdaExecutionRole:
@@ -1238,6 +1239,7 @@ Resources:
       HealthCheckType: EC2
       TargetGroupARNs:
         - !If [UseSTG, {"Fn::ImportValue": !Sub "${InfrastructureStack}-RPCALBGroup"}, !Ref 'AWS::NoValue']
+        - !If [HasILB, {"Fn::ImportValue": !Sub "${InfrastructureStack}-ITGALBGroup"}, !Ref 'AWS::NoValue']
         - !If [HasETG, !Ref ExternalTargetGroup, !Ref 'AWS::NoValue']
       MetricsCollection:
       - Granularity: 1Minute
