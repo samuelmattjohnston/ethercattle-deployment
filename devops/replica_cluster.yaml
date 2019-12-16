@@ -1252,7 +1252,6 @@ Resources:
 
                 yum install -y https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/$ARCH/latest/amazon-cloudwatch-agent.rpm jq fio || true
 
-                fio --filename=/dev/sdf --rw=read --bs=128k --iodepth=32 --ioengine=libaio --direct=1 --name=volume-initialize &
 
                 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c ssm:${MetricsConfigParameter} -s
 
@@ -1308,9 +1307,10 @@ Resources:
                   /usr/bin/replica-hook
                 fi
                 export AWS_DEFAULT_REGION=${AWS::Region}
-                wait
-                VOLUME_ID=$(aws ec2 describe-volumes --filters Name=attachment.instance-id,Values="$(curl http://169.254.169.254/latest/meta-data/instance-id)" | jq '.Volumes[] | select(. | .Attachments[0].Device == "/dev/sdf") | .VolumeId' -cr)
-                sleep 300 && aws ec2 modify-volume --volume-id $VOLUME_ID --volume-type gp2 &
+                # fio --filename=/dev/sdf --rw=read --bs=128k --iodepth=32 --ioengine=libaio --direct=1 --name=volume-initialize &
+                # wait
+                # VOLUME_ID=$(aws ec2 describe-volumes --filters Name=attachment.instance-id,Values="$(curl http://169.254.169.254/latest/meta-data/instance-id)" | jq '.Volumes[] | select(. | .Attachments[0].Device == "/dev/sdf") | .VolumeId' -cr)
+                # sleep 300 && aws ec2 modify-volume --volume-id $VOLUME_ID --volume-type gp2 &
               - KafkaHostname:
                   "Fn::ImportValue": !Sub "${InfrastructureStack}-KafkaBrokerURL"
                 ClusterId:
