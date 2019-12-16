@@ -1308,9 +1308,9 @@ Resources:
                   /usr/bin/replica-hook
                 fi
                 export AWS_DEFAULT_REGION=${AWS::Region}
+                wait
                 VOLUME_ID=$(aws ec2 describe-volumes --filters Name=attachment.instance-id,Values="$(curl http://169.254.169.254/latest/meta-data/instance-id)" | jq '.Volumes[] | select(. | .Attachments[0].Device == "/dev/sdf") | .VolumeId' -cr)
                 sleep 300 && aws ec2 modify-volume --volume-id $VOLUME_ID --volume-type gp2 &
-                wait
               - KafkaHostname:
                   "Fn::ImportValue": !Sub "${InfrastructureStack}-KafkaBrokerURL"
                 ClusterId:
