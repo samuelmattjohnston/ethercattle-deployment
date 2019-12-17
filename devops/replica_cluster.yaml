@@ -1302,7 +1302,7 @@ Resources:
                 systemctl enable journald-cloudwatch-logs
                 systemctl start journald-cloudwatch-logs
 
-                fio --filename=/dev/sdf --rw=read --bs=128k --iodepth=32 --ioengine=libaio --prio=7 --prioclass=3 --thinktime=2 --rate_iops=$((${!Ref DiskSize} * 3 - 100 )) --direct=1 --name=volume-initialize &
+                fio --filename=/dev/sdf --rw=read --bs=128k --iodepth=32 --ioengine=libaio --prio=7 --prioclass=3 --thinktime=2 --rate_iops=$((${DiskSize} * 3 - 100 )) --direct=1 --name=volume-initialize &
                 if [ -f /usr/bin/replica-hook ]
                 then
                   /usr/bin/replica-hook
