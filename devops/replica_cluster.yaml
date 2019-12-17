@@ -1308,6 +1308,7 @@ Resources:
                 fi
                 export AWS_DEFAULT_REGION=${AWS::Region}
                 fio --filename=/dev/sdf --rw=read --bs=128k --iodepth=32 --ioengine=libaio --direct=1 --name=volume-initialize &
+                wait
                 VOLUME_ID=$(aws ec2 describe-volumes --filters Name=attachment.instance-id,Values="$(curl http://169.254.169.254/latest/meta-data/instance-id)" | jq '.Volumes[] | select(. | .Attachments[0].Device == "/dev/sdf") | .VolumeId' -cr)
                 aws ec2 modify-volume --volume-id $VOLUME_ID --volume-type gp2 &
               - KafkaHostname:
